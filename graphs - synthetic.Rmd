@@ -1,0 +1,703 @@
+---
+title: "animated graphs"
+output: powerpoint_presentation
+date: "2023-05-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+# Charge libraries:
+library(ggplot2)
+#library(gganimate)
+library(dplyr)
+library(magrittr)
+library(tibble)
+library(gridExtra)
+library(grid)
+library(scales)
+library(egg)
+library(cowplot)
+library(patchwork)
+
+```
+
+```{r Graph of Data}
+data_3<-read.csv("syntheticData1_sep05_feature4_flip001.csv",header = FALSE)
+n_features = 4 #look at the name of the csv file, copy the number right after feature
+if(n_features ==4) {colnames(data)<-c("X1","X2","X3","X4","y")} else if (n_features ==5) {colnames(data)<-c("X1","X2","X3","X4","X5","y")} else if (n_features ==7) {colnames(data)<-c("X1","X2","X3","X4","X5","X6","X7","y")} else if (n_features ==10) {colnames(data)<-c("X1","X2","X3","X4","X5","X6","X7","X8","X9","X10","y")}
+
+plot_41<-ggplot(data_3,aes(x = X2 , y = X1, group = as.factor(y)))+
+  theme_bw()+
+  labs(x = "X2", y = "X1", color = "Class")+
+  geom_point(show.legend=TRUE,aes(color = as.factor(y)),size=0.5)+
+  scale_y_continuous(breaks = seq(-10,10))+
+  scale_x_continuous(breaks = seq(-10,10))+
+  theme(title = element_text(margin = margin(r = 10), size = 10,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 11,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 11,family= "serif"),
+        axis.text = element_text(size = 10,family = "serif"),
+        aspect.ratio = 1/1,legend.position = "top",
+        legend.title = element_text(size=12,family= "serif"), #change legend title font size
+        legend.text = element_text(size=10,family= "serif"),
+        legend.key.size = unit(0.5, 'cm'),
+        plot.title = element_text(hjust = 0.95, vjust = 1))+
+  scale_color_manual("Class Label",values=c("grey21","grey55"))+
+  theme(strip.text.x = element_text(size = 7,family= "serif",face="bold"))
+plot_41<-set_panel_size(plot_41,
+                          width  = unit(3, "in"),
+                          height = unit(3, "in"))
+grid.newpage()
+grid.draw(plot_41)
+
+```
+
+
+```{r Graph of Uncertainty}
+data_4<-read.csv("syntheticData1_sep05_feature4_flip001_test_pred_50ensembles.csv",header = TRUE)
+
+data_4 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2)))
+options(repr.plot.width =9, repr.plot.height =9) 
+
+plot_42<-ggplot(data_4,aes(x = X2 , y = Delta_uncertainty))+
+  theme_bw()+
+  labs(x = "X2", y = "Absolute Difference between\n Non_EIV and EIV Uncertainty")+
+  geom_boxplot(aes(group = X2 , y = Delta_uncertainty),show.legend=FALSE)+
+  theme(title = element_text(margin = margin(r = 10), size = 10,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 11,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 11,family= "serif"),
+        axis.text = element_text(size = 10,family = "serif"),
+        aspect.ratio = 1/1,legend.position = "top",
+        legend.title = element_text(size=10,family= "serif"), #change legend title font size
+        legend.text = element_text(size=10,family= "serif"),
+        legend.key.size = unit(0.5, 'cm'),
+        plot.title = element_text(hjust = 0.95, vjust = 1),
+        strip.text.x = element_text(size = 7,family= "serif",face="bold"),
+        )+
+  scale_y_continuous(trans='log10')+
+  scale_x_continuous(breaks=seq(-10,10))
+plot_42<-set_panel_size(plot_42,
+                          width  = unit(3, "in"),
+                          height = unit(3, "in"))
+grid.newpage()
+grid.draw(plot_42)
+```
+
+```{r Graph of Uncertainty_2}
+data_5<-read.csv("syntheticData1_sep05_feature4_flip001_test_pred_50ensembles.csv",header = TRUE)
+
+data_5 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= as.factor(round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))
+options(repr.plot.width =9, repr.plot.height =9) 
+
+plot_43<-ggplot(data_5,aes(x = X2 , y = Delta_uncertainty, group = Sensitive))+
+  theme_bw()+
+  labs(x = "X2", y = "Absolute Difference between \nNon_EIV and EIV Uncertainty")+
+  geom_boxplot(aes(color = Sensitive),show.legend=TRUE)+
+  scale_x_discrete(breaks = seq(-10,10))+
+  scale_y_continuous(trans='log10')+
+  theme(title = element_text(margin = margin(r = 10), size = 10,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 11,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 11,family= "serif"),
+        axis.text = element_text(size = 10,family = "serif"),
+        aspect.ratio = 1/1,legend.position = "top",
+        legend.title = element_text(size=10,family= "serif"), #change legend title font size
+        legend.text = element_text(size=10,family= "serif"),
+        legend.key.size = unit(0.5, 'cm'),
+        plot.title = element_text(hjust = 0.95, vjust = 1))+
+  scale_color_manual("Sensitive to Changes in X2",values=c("grey21","red"),labels = c("No","Yes"))+
+  theme(strip.text.x = element_text(size = 7,family= "serif",face="bold"))
+plot_43<-set_panel_size(plot_43,
+                          width  = unit(3, "in"),
+                          height = unit(3, "in"))
+grid.newpage()
+grid.draw(plot_43)
+```
+
+```{r merging plots}
+#plot_1<-grid.arrange(plot_11,plot_13,plot_12,nrow =3,arrangeGrob(widths=c(1,1,1)) )
+plot_1 <- cowplot::plot_grid(plot_11,plot_21,plot_31,plot_41,plot_12,plot_22,plot_32,plot_42,plot_13,plot_23,plot_33,plot_43,align = "v",nrow =3,rel_widths = c(1,1,1))
+plot_1
+ggsave("Simulation3.png",plot_1,dpi = 600,,width = 16,height =12)
+```
+
+```{r Graph of Data_Total_class sep}
+data_11<-read.csv("syntheticData1_sep05_feature4_flip001.csv",header = FALSE)
+data_12<-read.csv("syntheticData1_sep1_feature4_flip001.csv",header = FALSE)
+data_13<-read.csv("syntheticData1_sep25_feature4_flip001.csv",header = FALSE)
+data_14<-read.csv("syntheticData1_sep5_feature4_flip001.csv",header = FALSE)
+
+#"Randomness = 0.01, Noise level = 0
+data_11 %<>%
+  mutate(class_sep = "Class separation = 0.5")
+data_12 %<>%
+  mutate(class_sep = "Class separation = 1")
+data_13 %<>%
+  mutate(class_sep = "Class separation = 2.5")
+data_14 %<>%
+  mutate(class_sep = "Class separation = 5")
+
+
+data<-rbind(data_11,data_12,data_13,data_14)
+#data_3<-read.csv("Synthetic2_test.csv")
+#data_3<-data_3%<>%
+  #select(X1,X2,X3,X4,y)
+colnames(data)<-c("X1","X2","X3","X4","y","class_sep")
+#colnames(data_3)<-c("X1","X2","X3","y")
+#colnames(data_3)<-c("X1","X2","X3","X4","X5","X6","X7","X8","y")
+
+plot_61<-ggplot(data,aes(x = X2 , y = X1, group = as.factor(y)))+
+  theme_bw()+
+  labs(x = "X2", y = "X1", color = "Class")+
+  geom_point(show.legend=TRUE,aes(color = as.factor(y)),size=2)+
+  scale_y_continuous(breaks = seq(-10,10,2))+
+  scale_x_continuous(breaks = seq(-10,10,2))+
+  theme(title = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 46,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.text = element_text(size = 42,family = "serif"),
+        aspect.ratio = 1/1,
+        legend.position="bottom",
+        legend.direction="horizontal",
+        legend.justification=c(1, 1.5), 
+        legend.title = element_text(size=46,family= "serif"), #change legend title font size
+        legend.text = element_text(size=46,family= "serif"),
+        plot.title = element_text(hjust = 0.95, vjust = 1))+
+  guides(color = guide_legend(override.aes = list(size=8)))+
+  scale_color_manual("Class Label",values=c("grey50","#BF360C"))+
+  facet_wrap(~ class_sep, nrow = 1)+
+  theme(strip.text.x = element_text(size = 42,family= "serif",face="bold"),
+        strip.clip = "on")
+
+plot_61<-set_panel_size(plot_61,
+                         width  = unit(8, "in"),
+                         height = unit(8, "in"))
+grid.newpage()
+grid.draw(plot_61)
+
+```
+
+```{r Graph of Uncertainty_Total_class sep}
+data_11<-read.csv("syntheticData1_sep05_feature4_flip001_test_pred_50ensembles.csv")
+data_12<-read.csv("syntheticData1_sep1_feature4_flip001_test_pred_50ensembles.csv")
+data_13<-read.csv("syntheticData1_sep25_feature4_flip001_test_pred_50ensembles.csv")
+data_14<-read.csv("syntheticData1_sep5_feature4_flip001_test_pred_50ensembles.csv")
+
+data_11 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(class_sep = "Class Separation = 0.5")
+data_12 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(class_sep = "Class Separation = 1")
+data_13 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(class_sep = "Class Separation = 2.5")
+data_14 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(class_sep = "Class Separation = 5")
+data<-rbind(data_11,data_12,data_13,data_14)
+
+data %<>%
+  mutate(Delta_uncertainty = Delta_uncertainty + 0.0001)
+
+plot_62<-ggplot(data,aes(x = X2 , y = Delta_uncertainty))+
+  theme_bw()+
+  labs(x = "X2", y = "Absolute Difference between \nnon-EIV and EIV Uncertainty")+
+  geom_boxplot(aes(group = X2 , y = Delta_uncertainty),show.legend=FALSE, lwd = 1, fatten = 2)+
+  theme(title = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 46,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.text = element_text(size = 42,family = "serif",colour = "black"),
+        aspect.ratio = 1/1,legend.position = "top",
+        legend.title = element_text(size=46,family= "serif"), #change legend title font size
+        legend.text = element_text(size=46,family= "serif"),
+        legend.key.size = unit(0.5, 'cm'),
+        plot.title = element_text(hjust = 0.95, vjust = 1),
+        strip.text.x = element_text(size = 42,family= "serif",face="bold"),
+        )+
+  scale_y_continuous(trans = "log10", labels = scales::label_number(accuracy = 0.001))+
+  scale_x_continuous(breaks=seq(-10,10,2))+
+  facet_wrap(~ class_sep, nrow = 1)+
+  theme(strip.text.x = element_blank())
+  
+plot_62<-set_panel_size(plot_62,
+                          width  = unit(8, "in"),
+                          height = unit(8, "in"))
+
+
+grid.newpage()
+grid.draw(plot_62)
+```
+
+
+```{r Graph of Uncertainty_2_Total_class sep}
+data_11<-read.csv("syntheticData1_sep05_feature4_flip001_test_pred_50ensembles.csv")
+data_12<-read.csv("syntheticData1_sep1_feature4_flip001_test_pred_50ensembles.csv")
+data_13<-read.csv("syntheticData1_sep25_feature4_flip001_test_pred_50ensembles.csv")
+data_14<-read.csv("syntheticData1_sep5_feature4_flip001_test_pred_50ensembles.csv")
+
+data_11 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(class_sep = "Class Separation = 0.5")
+data_12 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(class_sep = "Class Separation = 1")
+data_13 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(class_sep = "Class Separation = 2.5")
+data_14 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(class_sep = "Class Separation = 5")
+
+data<-rbind(data_11,data_12,data_13,data_14)
+data %<>%
+  mutate(Sensitive = ifelse(Sensitive == 0, "No","Yes"))%>%
+  mutate(Delta_uncertainty = Delta_uncertainty + 0.0001)
+
+plot_63<-ggplot(data,aes(x = X2 , y = Delta_uncertainty, color = Sensitive))+
+  theme_bw()+
+  labs(x = "Sensitive to Changes in X2", y = "Absolute Difference between \nnon-EIV and EIV Uncertainty")+
+  geom_boxplot(aes(x = Sensitive, y =Delta_uncertainty,color = Sensitive ),show.legend = FALSE, lwd = 1.5, fatten = 3)+
+  scale_y_continuous(trans = "log10",labels = scales::label_number(accuracy = 0.001))+
+  theme(title = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 46,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.text = element_text(size = 42,family = "serif",colour = "black"),
+        aspect.ratio = 1/1,legend.position=c(1,1),
+        legend.direction="horizontal",
+        legend.justification=c(1, -0.5), 
+        legend.title = element_text(size=46,family= "serif"), #change legend title font size
+        legend.text = element_text(size=46,family= "serif"),
+        legend.key.size = unit(0.5, 'cm'),
+        plot.title = element_text(hjust = 0.95, vjust = 1))+
+  scale_color_manual("Sensitive to Changes in X2",values=c("grey30","#880E4F"),labels = c("No","Yes"))+
+  facet_wrap(~ class_sep, nrow = 1)+
+  theme(strip.text.x = element_blank())
+
+plot_63<-set_panel_size(plot_63,
+                          width  = unit(8, "in"),
+                          height = unit(8, "in"))
+grid.newpage()
+grid.draw(plot_63)
+```
+
+```{r merging plots_Total_class sep}
+plot <- cowplot::plot_grid(plot_61,plot_62,plot_63,labels = c("(a) Data Distribution","(b) Corresponding Distribution of Absolute Difference Between non-EIV and EIV Uncertainty ","(c) Corresponding Distribution of Absolute Difference Between non-EIV and EIV Uncertainty \n for Sensitive and Insensetive Predictions to X2 Errors"),nrow =3,align = "v",rel_widths = c(1,1,1),label_size = 46,label_fontface = "bold",label_fontfamily="serif",
+  label_x = 0.5, label_y = 0.99,hjust = 0.5,vjust = 1)
+
+ggsave("Simulation3_total_v05.png",plot,dpi = 600,width = 37,height =38,bg = "white")
+```
+
+
+```{r Graph of Data_Total_Noise}
+data_11<-read.csv("syntheticData1_sep5_feature4_flip001.csv",header = FALSE)
+data_12<-read.csv("syntheticData1_sep5_feature5_flip001.csv",header = FALSE)
+data_13<-read.csv("syntheticData1_sep5_feature7_flip001.csv",header = FALSE)
+data_14<-read.csv("syntheticData1_sep5_feature10_flip001.csv",header = FALSE)
+
+data_11<-data_11[,c(1,2,3,4,5)]
+data_12<-data_12[,c(1,2,3,4,6)]
+data_13<-data_13[,c(1,2,3,4,8)]
+data_14<-data_14[,c(1,2,3,4,11)]
+
+colnames(data_11)<-c("X1","X2","X3","X4","y")
+colnames(data_12)<-c("X1","X2","X3","X4","y")
+colnames(data_13)<-c("X1","X2","X3","X4","y")
+colnames(data_14)<-c("X1","X2","X3","X4","y")
+#Randomness = 0.01,Class separation = 5
+data_11 %<>%
+  mutate(Noise_Level = "Noise Level = 0")
+data_12 %<>%
+  mutate(Noise_Level = "Noise Level = 1")
+data_13 %<>%
+  mutate(Noise_Level = "Noise Level = 3")
+data_14 %<>%
+  mutate(Noise_Level = "Noise Level = 6")
+
+
+data<-rbind(data_11,data_12,data_13,data_14)
+#data_3<-read.csv("Synthetic2_test.csv")
+#data_3<-data_3%<>%
+  #select(X1,X2,X3,X4,y)
+colnames(data)<-c("X1","X2","X3","X4","y","Noise_Level")
+#colnames(data_3)<-c("X1","X2","X3","y")
+#colnames(data_3)<-c("X1","X2","X3","X4","X5","X6","X7","X8","y")
+
+plot_61<-ggplot(data,aes(x = X2 , y = X1, group = as.factor(y)))+
+  theme_bw()+
+  labs(x = "X2", y = "X1", color = "Class")+
+  geom_point(show.legend=TRUE,aes(color = as.factor(y)),size=2)+
+  scale_y_continuous(breaks = seq(-10,10,2))+
+  scale_x_continuous(breaks = seq(-10,10,2))+
+  theme(title = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 46,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.text = element_text(size = 42,family = "serif"),
+        aspect.ratio = 1/1,
+        legend.position="bottom",
+        legend.direction="horizontal",
+        legend.justification=c(1, 1.5), 
+        legend.title = element_text(size=46,family= "serif"), #change legend title font size
+        legend.text = element_text(size=46,family= "serif"),
+        plot.title = element_text(hjust = 0.95, vjust = 1))+
+  guides(color = guide_legend(override.aes = list(size=8)))+
+  scale_color_manual("Class Label",values=c("grey50","#BF360C"))+
+  facet_wrap(~ Noise_Level, nrow = 1)+
+  theme(strip.text.x = element_text(size = 42,family= "serif",face="bold"),
+        strip.clip = "on")
+
+plot_61<-set_panel_size(plot_61,
+                         width  = unit(8, "in"),
+                         height = unit(8, "in"))
+grid.newpage()
+grid.draw(plot_61)
+
+
+```
+
+
+```{r Graph of Uncertainty_Total_Noise}
+data_11<-read.csv("syntheticData1_sep5_feature4_flip001_test_pred_50ensembles.csv")
+data_12<-read.csv("syntheticData1_sep5_feature5_flip001_test_pred_50ensembles.csv")
+data_13<-read.csv("syntheticData1_sep5_feature7_flip001_test_pred_50ensembles.csv")
+data_14<-read.csv("syntheticData1_sep5_feature10_flip001_test_pred_50ensembles.csv")
+
+data_11 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(Noise_Level = "Noise Level = 0")
+data_12 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(Noise_Level = "Noise Level = 1")
+data_13 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(Noise_Level = "Noise Level = 3")
+data_14 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(Noise_Level = "Noise Level = 6")
+data<-rbind(data_11,data_12,data_13,data_14)
+data %<>%
+  mutate(Delta_uncertainty = Delta_uncertainty + 0.0001)
+
+plot_62<-ggplot(data,aes(x = X2 , y = Delta_uncertainty))+
+  theme_bw()+
+  labs(x = "X2", y = "Absolute Difference between \nnon-EIV and EIV Uncertainty")+
+  geom_boxplot(aes(group = X2 , y = Delta_uncertainty),show.legend=FALSE, lwd = 1, fatten = 2)+
+  theme(title = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 46,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.text = element_text(size = 42,family = "serif",colour = "black"),
+        aspect.ratio = 1/1,legend.position = "top",
+        legend.title = element_text(size=46,family= "serif"), #change legend title font size
+        legend.text = element_text(size=46,family= "serif"),
+        legend.key.size = unit(0.5, 'cm'),
+        plot.title = element_text(hjust = 0.95, vjust = 1),
+        )+
+  scale_y_continuous(trans = "log10", labels = scales::label_number(accuracy = 0.001))+
+  scale_x_continuous(breaks=seq(-10,10,2))+
+  facet_wrap(~ Noise_Level, nrow = 1)+
+  theme(strip.text.x = element_blank())
+  
+plot_62<-set_panel_size(plot_62,
+                          width  = unit(8, "in"),
+                          height = unit(8, "in"))
+
+
+grid.newpage()
+grid.draw(plot_62)
+```
+
+
+```{r Graph of Uncertainty_2_Total_Noise}
+data_11<-read.csv("syntheticData1_sep5_feature4_flip001_test_pred_50ensembles.csv")
+data_12<-read.csv("syntheticData1_sep5_feature5_flip001_test_pred_50ensembles.csv")
+data_13<-read.csv("syntheticData1_sep5_feature7_flip001_test_pred_50ensembles.csv")
+data_14<-read.csv("syntheticData1_sep5_feature10_flip001_test_pred_50ensembles.csv")
+
+data_11 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(Noise_Level = "Noise Level = 0")
+data_12 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(Noise_Level = "Noise Level = 1")
+data_13 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(Noise_Level = "Noise Level = 3")
+data_14 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(Noise_Level = "Noise Level = 6")
+
+data<-rbind(data_11,data_12,data_13,data_14)
+data %<>%
+  mutate(Sensitive = ifelse(Sensitive == 0, "No","Yes"))
+data %<>%
+  mutate(Delta_uncertainty = Delta_uncertainty+0.0001)
+
+plot_63<-ggplot(data,aes(x = X2 , y = Delta_uncertainty, color = Sensitive))+
+  theme_bw()+
+  labs(x = "Sensitive to Changes in X2", y = "Absolute Difference between \nnon-EIV and EIV Uncertainty")+
+  geom_boxplot(aes(x = Sensitive, y =Delta_uncertainty,color = Sensitive ),show.legend = FALSE, lwd = 1.5, fatten = 3)+
+  scale_y_continuous(trans = "log10",labels = scales::label_number(accuracy = 0.001))+
+  theme(title = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 46,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.text = element_text(size = 42,family = "serif",colour = "black"),
+        aspect.ratio = 1/1,legend.position=c(1,1),
+        legend.direction="horizontal",
+        legend.justification=c(1, -0.5), 
+        legend.title = element_text(size=46,family= "serif"), #change legend title font size
+        legend.text = element_text(size=46,family= "serif"),
+        legend.key.size = unit(0.5, 'cm'),
+        plot.title = element_text(hjust = 0.95, vjust = 1))+
+  scale_color_manual("Sensitive to Changes in X2",values=c("grey30","#880E4F"),labels = c("No","Yes"))+
+  facet_wrap(~ Noise_Level, nrow = 1)+
+  theme(strip.text.x = element_blank())
+
+plot_63<-set_panel_size(plot_63,
+                          width  = unit(8, "in"),
+                          height = unit(8, "in"))
+grid.newpage()
+grid.draw(plot_63)
+```
+
+```{r merging plots_Total_Noise}
+plot <- cowplot::plot_grid(plot_61,plot_62,plot_63,labels = c("(a) Data Distribution","(b) Corresponding Distribution of Absolute Difference Between non-EIV and EIV Uncertainty ","(c) Corresponding Distribution of Absolute Difference Between non-EIV and EIV Uncertainty \n for Sensitive and Insensetive Predictions to X2 Errors"),nrow =3,align = "v",rel_widths = c(1,1,1),label_size = 46,label_fontface = "bold",label_fontfamily="serif",
+  label_x = 0.5, label_y = 0.99,hjust = 0.5,vjust = 1)
+
+ggsave("Simulation4_total_v05.png",plot,dpi = 600,width = 37,height =38,bg = "white")
+```
+
+
+```{r Graph of Data_Total_randomness}
+data_11<-read.csv("syntheticData1_sep25_feature4_flip001.csv",header = FALSE)
+data_12<-read.csv("syntheticData1_sep25_feature4_flip01.csv",header = FALSE)
+data_13<-read.csv("syntheticData1_sep25_feature4_flip02.csv",header = FALSE)
+data_14<-read.csv("syntheticData1_sep25_feature4_flip06.csv",header = FALSE)
+
+#Noise Level = 0, Class separation = 2.5
+data_11 %<>%
+  mutate(randomness = "Randomness = 0.01")
+data_12 %<>%
+  mutate(randomness = "Randomness = 0.1")
+data_13 %<>%
+  mutate(randomness = "Randomness = 0.2")
+data_14 %<>%
+  mutate(randomness = "Randomness = 0.6")
+
+
+data<-rbind(data_11,data_12,data_13,data_14)
+#data_3<-read.csv("Synthetic2_test.csv")
+#data_3<-data_3%<>%
+  #select(X1,X2,X3,X4,y)
+colnames(data)<-c("X1","X2","X3","X4","y","randomness")
+#colnames(data_3)<-c("X1","X2","X3","y")
+#colnames(data_3)<-c("X1","X2","X3","X4","X5","X6","X7","X8","y")
+
+plot_61<-ggplot(data,aes(x = X2 , y = X1, group = as.factor(y)))+
+  theme_bw()+
+  labs(x = "X2", y = "X1", color = "Class")+
+  geom_point(show.legend=TRUE,aes(color = as.factor(y)),size=2)+
+  scale_y_continuous(breaks = seq(-10,10,2))+
+  scale_x_continuous(breaks = seq(-10,10,2))+
+  theme(title = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 46,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.text = element_text(size = 42,family = "serif"),
+        aspect.ratio = 1/1,
+        legend.position="bottom",
+        legend.direction="horizontal",
+        legend.justification=c(1, 1.5), 
+        legend.title = element_text(size=46,family= "serif"), #change legend title font size
+        legend.text = element_text(size=46,family= "serif"),
+        plot.title = element_text(hjust = 0.95, vjust = 1))+
+  guides(color = guide_legend(override.aes = list(size=6)))+
+  scale_color_manual("Class Label",values=c("grey50","#BF360C"))+
+  facet_wrap(~ randomness, nrow = 1)+
+  theme(strip.text.x = element_text(size = 42,family= "serif",face="bold"),
+        strip.clip = "on")
+
+plot_61<-set_panel_size(plot_61,
+                         width  = unit(8, "in"),
+                         height = unit(8, "in"))
+grid.newpage()
+grid.draw(plot_61)
+
+```
+
+
+```{r Graph of Uncertainty_Total_randomness}
+data_11<-read.csv("syntheticData1_sep25_feature4_flip001_test_pred_50ensembles.csv")
+data_12<-read.csv("syntheticData1_sep25_feature4_flip01_test_pred_50ensembles.csv")
+data_13<-read.csv("syntheticData1_sep25_feature4_flip02_test_pred_50ensembles.csv")
+data_14<-read.csv("syntheticData1_sep25_feature4_flip06_test_pred_50ensembles.csv")
+
+data_11 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(randomness = "0.01")
+data_12 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(randomness = "0.1")
+data_13 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(randomness = "0.02")
+data_14 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  select(Delta_uncertainty,X2)%>%
+  mutate(randomness = "0.06")
+
+data<-rbind(data_11,data_12,data_13,data_14)
+data %<>%
+  mutate(Delta_uncertainty = Delta_uncertainty + 0.0001)
+
+plot_62<-ggplot(data,aes(x = X2 , y = Delta_uncertainty))+
+ theme_bw()+
+  labs(x = "X2", y = "Absolute Difference between \nnon-EIV and EIV Uncertainty")+
+  geom_boxplot(aes(group = X2 , y = Delta_uncertainty),show.legend=FALSE, lwd = 1, fatten = 2)+
+  theme(title = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 46,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.text = element_text(size = 42,family = "serif",colour = "black"),
+        aspect.ratio = 1/1,legend.position = "top",
+        legend.title = element_text(size=46,family= "serif"), #change legend title font size
+        legend.text = element_text(size=46,family= "serif"),
+        legend.key.size = unit(0.5, 'cm'),
+        plot.title = element_text(hjust = 0.95, vjust = 1),
+        strip.text.x = element_text(size = 42,family= "serif",face="bold"),
+        )+
+  scale_y_continuous(trans = "log10", labels = scales::label_number(accuracy = 0.001))+
+  scale_x_continuous(breaks=seq(-10,10,2))+
+  facet_wrap(~ randomness, nrow = 1)+
+  theme(strip.text.x = element_blank())
+  
+plot_62<-set_panel_size(plot_62,
+                          width  = unit(8, "in"),
+                          height = unit(8, "in"))
+
+
+grid.newpage()
+grid.draw(plot_62)
+```
+
+
+```{r Graph of Uncertainty_2_Total_randomness,echo=FALSE}
+data_11<-read.csv("syntheticData1_sep25_feature4_flip001_test_pred_50ensembles.csv")
+data_12<-read.csv("syntheticData1_sep25_feature4_flip01_test_pred_50ensembles.csv")
+data_13<-read.csv("syntheticData1_sep25_feature4_flip02_test_pred_50ensembles.csv")
+data_14<-read.csv("syntheticData1_sep25_feature4_flip06_test_pred_50ensembles.csv")
+
+data_11 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(randomness = "0.01")
+data_12 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(randomness = "0.1")
+data_13 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(randomness = "0.02")
+data_14 %<>%
+  mutate(Delta_uncertainty = abs(Non_EIV - EIV)) %>%
+  mutate(X2= (round(X2))) %>%
+  mutate(Sensitive= as.factor(Sensitive))%>%
+  select(Delta_uncertainty,X2,Sensitive)%>%
+  mutate(randomness = "0.06")
+
+data<-rbind(data_11,data_12,data_13,data_14)
+data %<>%
+  mutate(Sensitive = ifelse(Sensitive == 0, "No","Yes"))%>%
+  mutate(Delta_uncertainty = Delta_uncertainty + 0.0001)
+
+plot_63<-ggplot(data,aes(x = X2 , y = Delta_uncertainty, color = Sensitive))+
+   theme_bw()+
+  labs(x = "Sensitive to Changes in X2", y = "Absolute Difference between \nnon-EIV and EIV Uncertainty")+
+  geom_boxplot(aes(x = Sensitive, y =Delta_uncertainty,color = Sensitive ),show.legend = FALSE, lwd = 1.5, fatten = 3)+
+  scale_y_continuous(trans = "log10",labels = scales::label_number(accuracy = 0.001))+
+  theme(title = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.title.x = element_text(margin = margin(t = 9), size = 46,family= "serif"),
+        axis.title.y = element_text(margin = margin(r = 10), size = 46,family= "serif"),
+        axis.text = element_text(size = 42,family = "serif",colour = "black"),
+        aspect.ratio = 1/1,legend.position=c(1,1),
+        legend.direction="horizontal",
+        legend.justification=c(1, -0.5), 
+        legend.title = element_text(size=46,family= "serif"), #change legend title font size
+        legend.text = element_text(size=46,family= "serif"),
+        legend.key.size = unit(0.5, 'cm'),
+        plot.title = element_text(hjust = 0.95, vjust = 1))+
+  scale_color_manual("Sensitive to Changes in X2",values=c("grey30","#880E4F"),labels = c("No","Yes"))+
+  theme(strip.text.x = element_text(size = 42,family= "serif",face="bold"))+
+  facet_wrap(~ randomness, nrow = 1)+
+  theme(strip.text.x = element_blank())
+
+plot_63<-set_panel_size(plot_63,
+                          width  = unit(8, "in"),
+                          height = unit(8, "in"))
+grid.newpage()
+grid.draw(plot_63)
+```
+
+```{r merging plots_Total_randomness,echo=FALSE}
+plot <- cowplot::plot_grid(plot_61,plot_62,plot_63,labels = c("(a) Data Distribution","(b) Corresponding Distribution of Absolute Difference Between non-EIV and EIV Uncertainty ","(c) Corresponding Distribution of Absolute Difference Between non-EIV and EIV Uncertainty \n for Sensitive and Insensetive Predictions to X2 Errors"),nrow =3,align = "v",rel_widths = c(1,1,1),label_size = 46,label_fontface = "bold",label_fontfamily="serif",
+  label_x = 0.5, label_y = 0.99,hjust = 0.5,vjust = 1)
+
+ggsave("Simulation5_total_v05.png",plot,dpi = 600,width = 37,height =38,bg = "white")
+```
+
+
+

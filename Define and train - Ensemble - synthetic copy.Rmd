@@ -1,0 +1,420 @@
+---
+title: "LSTM_UQ_Cleaning"
+output: pdf_document
+date: "2024-10-06"
+---
+
+```{r setup, include=FALSE}
+rm(list=ls())
+library(readr)
+library(readxl)
+library(dplyr)
+library(caTools)
+library(reticulate)
+library(magrittr)
+library(tibble)
+library(ggplot2)
+library(sigmoid)
+library(ggplot2)
+#library(gganimate)
+library(dplyr)
+library(magrittr)
+library(tibble)
+library(gridExtra)
+library(grid)
+library(scales)
+library(smotefamily)
+```
+
+
+```{r install packages, include=FALSE}
+py_install("pandas")
+py_install("statsmodels")
+py_install("numpy")
+py_install("scikit-learn")
+py_install("tensorflow")
+
+```
+
+
+```{python import py packages}
+import numpy as np
+import pandas as pd
+
+import tensorflow as tf
+from tensorflow import keras
+from keras.models import Model
+from keras.layers import Input
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.layers import Dropout
+
+from keras.layers import Flatten
+from keras.layers.activation import Softmax
+from keras.layers.merging import concatenate
+from tensorflow.keras.utils import to_categorical
+import sklearn
+from sklearn.metrics import classification_report
+import sklearn
+from sklearn.metrics import classification_report
+
+import sklearn
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+
+```
+
+```{r define r functions}
+softmax1 <- function(x,y){
+  sm<-exp(1*y)/(exp(1*x)+exp(1*y))
+  return(sm)
+}
+softmax0 <- function(x,y){
+  sm<-exp(1*x)/(exp(1*x)+exp(1*y))
+  return(sm)
+}
+```
+
+```{python define py functions}
+
+class KerasDropoutPrediction(object):
+    def __init__(self,model):
+        self.f = K.function(
+                [model.layers[0].input, 
+                 K.learning_phase()],
+                [model.layers[-1].output])
+    def predict(self,x, n_iter=10):
+        result = []
+        for _ in range(n_iter):
+            result.append(self.f([x , 1]))
+        result = np.array(result).reshape(n_iter,len(x)).T
+        return result
+```
+
+```{python define NN model}
+SEED = 101
+
+visible =Input(shape=(4)) #shape is number of variables not steps
+hidden1 =Dense(4,activation="tanh", name='dense_1')(visible)
+
+#interpretation model
+hidden2 =Dense(2,activation='tanh',name='dense_2')(hidden1)
+output =Softmax(name='dense_3')(hidden2)
+
+model = Model(inputs=visible, outputs=output)
+```
+
+
+
+```{python model compile}
+SEED=101
+
+model.compile(loss='binary_crossentropy' , optimizer='adam' , metrics=[tf.keras.metrics.CategoricalAccuracy()])
+```
+#------------------------------------------------------------------------------------------------------------------------
+
+```{r reading data, include=TRUE}
+set.seed(1369)
+
+n_features = 4 #look at the name of the csv file, copy the number right after feature
+data<-read.csv("data.csv",header = FALSE)
+if(n_features ==4) {colnames(data)<-c("X1","X2","X3","X4","y")} else if (n_features ==5) {colnames(data)<-c("X1","X2","X3","X4","X5","y")} else if (n_features ==7) {colnames(data)<-c("X1","X2","X3","X4","X5","X6","X7","y")} else if (n_features ==10) {colnames(data)<-c("X1","X2","X3","X4","X5","X6","X7","X8","X9","X10","y")}
+
+```
+
+```{r define test and train}
+set.seed(1369)
+split <- sample.split(data$y, SplitRatio = 0.7)
+train <- subset(data, split == TRUE)
+test<- subset(data, split == FALSE)
+
+Probs<-c(0.45,0.1,0.45)
+
+test %<>%
+  mutate(ID = seq(1,nrow(test)),.before=X1)
+test2<-test
+test3<-test
+
+test %<>%
+  mutate(rep = 1,.before=X1)
+
+test2 %<>%
+  mutate(X2 = X2 + 1) %>%
+  mutate(rep = 2,.before=X1)
+
+test3 %<>%
+  mutate(X2 = X2 - 1) %>%
+  mutate(rep = 3,.before=X1)    
+
+
+test_PW<-rbind(test,test2,test3)
+rm(test2,test3)
+
+#Define probs 
+test_PW %<>%
+  mutate(prob=ifelse(rep==1,Probs[2],ifelse(rep==2,Probs[3],Probs[1])))
+
+#write train and test into csv file
+write_csv(train,"data_train.csv")
+write_csv(test,"data_test.csv")
+write.csv(test_PW,"data_test2.csv")
+ 
+```
+#------------------------------------------------------------------------------------------------------------------------
+```{r balance the imbalance trainset}
+num = n_features + 1
+train_balanced = ADAS(train[,-num],train[,num])$data
+
+write_csv(train_balanced,"data_train_balanced.csv")
+```
+
+
+```{python read and train data in python,include==FALSE}
+#reading data in python
+#trainset=pd.read_csv('syntheticData1_Jan25_feature4_flip01_imbalance90_10_train.csv')
+trainset=pd.read_csv('data_train_balanced.csv')
+
+#testset=pd.read_csv('Synthetic1_test.csv')
+testset2=pd.read_csv('data_test2.csv')
+if (n_features == 4) {test_X = testset2[['X1','X2','X3','X4']].values.reshape(testset2.shape[0],4)} else if (n_features == 5){test_X = testset2[['X1','X2','X3','X4','X5']].values.reshape(testset2.shape[0],5)} else if (n_features == 7){test_X = testset2[['X1','X2','X3','X4','X5','X6','X7']].values.reshape(testset2.shape[0],7)} else if (n_features == 10) {test_X = testset2[['X1','X2','X3','X4','X5','X6','X7','X8','X9','X10']].values.reshape(testset2.shape[0],10)}
+
+
+test_y = testset2['y'].values
+
+#Make train and validation set
+np.random.seed(SEED)
+n_ensembles = 50
+
+y_pred_matrix = np.empty(shape= (n_ensembles,testset2.shape[0],2))
+#y_pred2_matrix = np.empty(shape= (n_ensembles,test2_X.shape[0],2))
+
+Z_matrix = np.empty(shape= (n_ensembles,test_X.shape[0],2))
+prob_rep = np.empty(shape= (n_ensembles,test_X.shape[0],2))
+
+probs = testset2['prob'].values
+probs2 = np.repeat(probs, 2).reshape(probs.shape[0],2)
+
+
+
+for j in range(n_ensembles):
+  np.random.seed(SEED + j)
+  train_X, valid_X, train_y, valid_y = train_test_split(trainset.drop('y', axis=1).values, trainset['y'].values, test_size=0.2, random_state=SEED + j)
+
+  #change y format to categorical
+  train_yy=to_categorical(train_y,num_classes=2, dtype='float32')
+  valid_yy=to_categorical(valid_y,num_classes=2, dtype='float32')
+  test_yy=to_categorical(test_y,num_classes=2, dtype='float32')
+
+  #model training
+  history = model.fit(train_X , train_yy , epochs=20 , verbose=1 ,validation_data=(valid_X, valid_yy) ,shuffle=False)
+  #save predictions
+  
+  y_pred_matrix[j] = model.predict(test_X, batch_size=64, verbose=1)
+  
+
+  
+  
+  layer_output = model.get_layer('dense_2').output  #get the Output of the Layer
+  intermediate_model=tf.keras.models.Model(inputs=model.input,outputs=layer_output) #Intermediate model between Input Layer and Output Layer which we are concerned about
+  Z_matrix[j] = intermediate_model.predict(test_X) #predicting in the Intermediate Node
+  prob_rep[j] = probs2
+#------------------------------------------------------------------------------
+
+#y_pred = y_pred_matrix.mean(axis=0)
+
+y_prediceted = np.argmax(y_pred_matrix, axis=2)
+y_prediceted = y_prediceted.mean(axis=0)
+y = y_pred_matrix[0]
+
+
+Weighted_Z_matrix = Z_matrix * prob_rep
+
+Z_mean = Weighted_Z_matrix.mean(axis=0)
+Z_mean_non = Z_matrix.mean(axis=0)
+
+#intermediate_prediction_var = Z_matrix.var(axis=0)
+#delta is Z1 - Z0:
+delta = np.subtract(Z_matrix[:, :, 1], Z_matrix[:, :, 0])
+#(Z1-Z0)^2
+delta_sqrt = delta **2
+Weighted_delta = delta * prob_rep[:, :, 0]
+Weighted_delta_sqrt = delta_sqrt * prob_rep[:, :, 0]
+
+Delta_mean = Weighted_delta.mean(axis=0)
+Delta_mean_non = delta.mean(axis=0)
+
+#Delta_mean_sqrt = Delta_mean **2
+Delta_sqrt_mean = Weighted_delta_sqrt.mean(axis=0)
+Delta_sqrt_mean_non = delta_sqrt.mean(axis=0)
+
+
+Delta_mean = pd.DataFrame(Delta_mean,columns=['Delta_mean'])
+Delta = Delta_mean.join(pd.DataFrame(Delta_sqrt_mean,columns=['Delta_sqrt_mean']))
+#Delta = Delta_mean.join(pd.DataFrame(Delta_mean_sqrt,columns=['Delta_mean_sqrt']))
+Delta = Delta.join(pd.DataFrame(Z_mean,columns=['Z0_mean','Z1_mean']))
+Delta = Delta.join(pd.DataFrame(y,columns=['P0','P1']))
+Delta = Delta.join(pd.DataFrame(y_prediceted,columns=['pred']))
+#Delta = Delta.join(pd.DataFrame(y_prediceted2,columns=['pred_refined']))
+
+
+Delta_mean_non = pd.DataFrame(Delta_mean_non,columns=['Delta_mean'])
+Delta_non = Delta_mean_non.join(pd.DataFrame(Delta_sqrt_mean_non,columns=['Delta_sqrt_mean']))
+#Delta = Delta_mean.join(pd.DataFrame(Delta_mean_sqrt,columns=['Delta_mean_sqrt']))
+Delta_non = Delta_non.join(pd.DataFrame(Z_mean_non,columns=['Z0_mean','Z1_mean']))
+#Delta_non = Delta_non.join(pd.DataFrame(y_pred,columns=['P0','P1']))
+Delta_non = Delta_non.join(pd.DataFrame(y_prediceted,columns=['pred']))
+#Delta_non = Delta_non.join(pd.DataFrame(y_prediceted2,columns=['pred_refined']))
+
+
+
+
+Delta.to_csv("data_50ensembles.csv")
+Delta_non.to_csv("data_50ensembles_non.csv")
+
+```
+
+```{python Synthetic data analysis}
+y_0 = y[:,0]
+y_0 = pd.DataFrame(y_0, columns=['pred_0'])
+y_0.to_csv("data_test_pred_0.csv")
+
+```
+
+
+```{r add predictions to test data,echo=FALSE}
+#Add predictions to test data
+add_pred <- function(test,test_pred,pred_0,Rep,name){
+  pred_0 <- as.data.frame(pred_0[,-1])
+  colnames(pred_0)<-name
+  pred_0 <- pred_0 %<>%
+    mutate(rep = test$rep)
+  pred_0 <- pred_0 %>%
+    filter(rep==Rep)%>%
+    select(-rep)
+  test_pred<-bind_cols(test_pred,pred_0)
+  return(test_pred)
+
+}
+
+
+UQ1 <- function(test,predictions,Rep){
+  predictions<-as.data.frame(predictions[,-1])
+  test_pred<-bind_cols(test,predictions)
+  
+  test_pred_1 <- test_pred %>%
+    filter(rep==1)
+  test_pred_2 <- test_pred %>%
+    filter(rep==2)
+  test_pred_3 <- test_pred %>%
+    filter(rep==3)
+
+#Calculate the expected value and variance of not_cured probabilities
+#Smear sens=0.64, Spec=0.98 then P(Neg|Neg)=0.73 and P(Poz|Poz)=0.97
+  test_pred %<>%
+    filter(rep==Rep)
+#test_pred_1 contains observed values of smear
+#test_pred_2 contains possible world values of smear
+
+  test_pred$Mu0 <- test_pred_1$Z0_mean + test_pred_2$Z0_mean + test_pred_3$Z0_mean
+  test_pred$Mu1 <- test_pred_1$Z1_mean + test_pred_2$Z1_mean + test_pred_3$Z1_mean
+  test_pred$Delta_mean <- test_pred_1$Delta_mean + test_pred_2$Delta_mean + test_pred_3$Delta_mean
+  test_pred$var_dalta<-test_pred_1$Delta_sqrt_mean + test_pred_2$Delta_sqrt_mean + test_pred_3$Delta_sqrt_mean - test_pred$Delta_mean ^ 2
+
+  test_pred %<>%
+  mutate(EIV = softmax1(Mu0,Mu1)+ 0.5 * softmax1(Mu0,Mu1)*(1 - softmax1(Mu0,Mu1))*(1 - 2 * softmax1(Mu0,Mu1))*var_dalta) %>%
+  mutate(EIV = ifelse(EIV < 0,0.0001,ifelse(EIV >1, 1, EIV)))
+  return(test_pred)
+}
+
+
+UQ0 <- function(test,predictions,Rep){
+  predictions<-as.data.frame(predictions[,-1])
+  test_pred<-bind_cols(test,predictions)
+  
+  test_pred_1 <- test_pred %>%
+    filter(rep==1)
+  test_pred_2 <- test_pred %>%
+    filter(rep==2)
+  test_pred_3 <- test_pred %>%
+    filter(rep==3)
+
+  test_pred %<>%
+    filter(rep==Rep)
+
+  test_pred$Mu0 <- test_pred_1$Z0_mean + test_pred_2$Z0_mean + test_pred_3$Z0_mean
+  test_pred$Mu1 <- test_pred_1$Z1_mean + test_pred_2$Z1_mean + test_pred_3$Z1_mean
+  test_pred$Delta_mean <- test_pred_1$Delta_mean + test_pred_2$Delta_mean + test_pred_3$Delta_mean
+  test_pred$var_dalta<-test_pred_1$Delta_sqrt_mean + test_pred_2$Delta_sqrt_mean + test_pred_3$Delta_sqrt_mean - test_pred$Delta_mean ^ 2
+
+  test_pred %<>%
+  mutate(EIV = softmax0(Mu0,Mu1)+ 0.5 * softmax0(Mu0,Mu1)*(1 - softmax0(Mu0,Mu1))*(1 - 2 * softmax0(Mu0,Mu1))*var_dalta) %>%
+  return(test_pred)
+}
+
+NONEIV<-function(test_pred){
+  test_pred$Mu0 <- test_pred$Z0_mean
+  test_pred$Mu1 <- test_pred$Z1_mean
+  test_pred$var_dalta<-test_pred$Delta_sqrt_mean - test_pred$Delta_mean ^ 2
+  
+  test_pred %<>%
+  mutate(Non_EIV_1 = softmax1(Mu0,Mu1)+ 0.5 * softmax1(Mu0,Mu1)*(1 - softmax1(Mu0,Mu1))*(1 - 2 * softmax1(Mu0,Mu1))*var_dalta)%>%
+  mutate(Non_EIV_0 = softmax0(Mu0,Mu1)+ 0.5 * softmax0(Mu0,Mu1)*(1 - softmax0(Mu0,Mu1))*(1 - 2 * softmax0(Mu0,Mu1))*var_dalta)%>%
+  mutate(predicted_label=ifelse(Non_EIV_0>0.5,0,1)) %>%
+  mutate(Non_EIV = ifelse(predicted_label==0,Non_EIV_0,Non_EIV_1)) %>%
+  mutate(Non_EIV = ifelse(Non_EIV < 0,0.0001,ifelse(Non_EIV >1, 1, Non_EIV)))
+  return(as.data.frame(test_pred[,c("Non_EIV_1","Non_EIV_0","predicted_label","Non_EIV")]))
+}
+
+#-------------------------------------------
+
+test<-read.csv("data_test2.csv")
+predictions2<-read_csv("data_50ensembles.csv",show_col_types = FALSE)
+test_pred_EIV1<-UQ1(test,predictions2,1)
+test_pred_EIV0<-UQ0(test,predictions2,1)
+
+
+
+predictions<-read_csv("data_50ensembles_non.csv",show_col_types = FALSE)
+
+predictions<-as.data.frame(predictions[,-1])
+predictions<-cbind(predictions,predictions2[,c("P0","P1")])
+
+test_pred<-bind_cols(test,predictions)
+
+
+test_pred %<>%
+  mutate(label = ifelse(P1>0.5,1,0))
+  
+test_pred_1 <- test_pred %>%
+    filter(rep==1)
+test_pred_2 <- test_pred %>%
+    filter(rep==2)
+  
+test_pred$EIV_1 <- test_pred_EIV1$EIV
+test_pred$EIV_0 <- test_pred_EIV0$EIV
+
+test_pred <-cbind(test_pred,NONEIV(test_pred))
+
+test_pred %<>%
+  mutate(EIV = ifelse(predicted_label==0,EIV_0,EIV_1)) %>%
+  filter(rep==1)
+
+test_pred %<>%
+  mutate(misclassified = ifelse(y==predicted_label,0,1))
+
+pred1<-NONEIV(test_pred_1)
+pred2<-NONEIV(test_pred_2)
+
+test_pred %<>%
+  mutate(pred_match=ifelse(pred1$predicted_label==pred2$predicted_label,1,0))
+  
+pred_0<-read_csv("data_test_pred_0.csv",show_col_types = FALSE)
+test_pred <- add_pred(test = test,test_pred = test_pred,pred_0 = pred_0, Rep = 1,name = c("pred_original_0"))
+test_pred <- add_pred(test = test,test_pred = test_pred,pred_0 = pred_0, Rep = 2,name = c("pred_case1_0"))
+test_pred <- add_pred(test = test,test_pred = test_pred,pred_0 = pred_0, Rep = 3,name = c("pred_case2_0"))
+test_pred %<>%
+  mutate(abs_diff_EIV_nonEIV = abs(Non_EIV - EIV))%>%
+  mutate(Sensitive = ifelse(abs(pred_original_0 - pred_case1_0) > 0.005,1,ifelse(abs(pred_original_0 - pred_case2_0) > 0.005,1,0)))
+write.csv(test_pred,"data_test_pred_50ensembles.csv")
+  
+```
