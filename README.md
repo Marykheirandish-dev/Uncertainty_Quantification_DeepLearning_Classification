@@ -21,40 +21,8 @@ The file Define and train - Ensemble - synthetic copy.Rmd contains the complete 
 Instructions
 Choose a dataset from the Data/ folder.
 
-Replace all occurrences of "data.csv" in the R Markdown file with the actual dataset name (e.g., "Data_sep01_feature4_flip001.csv").
-
-Set n_features based on the number of features in the file name (e.g., n_features = 4 for feature4).
-
-Run the R Markdown file to compute uncertainties.
-
-Example Code Replacement
-Replace:
-
-set.seed(1369)
-n_features = 4
-data <- read.csv("data.csv", header = FALSE)
-if(n_features == 4) {
-  colnames(data) <- c("X1", "X2", "X3", "X4", "y")
-} else if(n_features == 5) {
-  colnames(data) <- c("X1", "X2", "X3", "X4", "X5", "y")
-} else if(n_features == 7) {
-  colnames(data) <- c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "y")
-} else if(n_features == 10) {
-  colnames(data) <- c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "y")
-}
-
-With:
-
-
-set.seed(1369)
-n_features = 4
-data <- read.csv("Data_sep01_feature4_flip001.csv", header = FALSE)
-if(n_features == 4) {
-  colnames(data) <- c("X1", "X2", "X3", "X4", "y")
-} else if(n_features == 5) {
-  colnames(data) <- c("X1", "X2", "X3", "X4", "X5", "y")
-} else if(n_features == 7) {
-  colnames(data) <- c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "y")
-} else if(n_features == 10) {
-  colnames(data) <- c("X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "X10", "y")
-}
+In .RMD:
+  Set FILE_PATH as the name of .csv file.
+  Set n_features based on the number of features in the file name (e.g., n_features = 4 for feature4).
+  Set OUTPUT_FILE_NAME as the name of output file (In our project, if input = data.csv, output is name data_test_pred_50ensemble.csv)
+Run the R Markdown file to compute uncertainties and p-values.
